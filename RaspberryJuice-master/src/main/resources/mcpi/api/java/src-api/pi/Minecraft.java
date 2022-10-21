@@ -5,6 +5,10 @@ import java.util.List;
 import pi.event.BlockHitEvent;
 import pi.tool.Tools;
 
+import java.security.KeyPair;
+import java.security.MessageDigest; 
+
+
 /**
  * The main class to interact with a running instance of Minecraft Pi.
  *
@@ -23,9 +27,13 @@ public class Minecraft {
     public final Entities entities = new Entities();
     public final Events events = new Events();
     public final Tools tools = new Tools(this);
+    public KeyPair pair;
 
     Minecraft(Connection connection) {
         this.connection = connection;
+        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
+        keyPairGen.initialize(2048);
+        pair = keyPairGen.generateKeyPair();
     }
 
     /**
@@ -41,6 +49,7 @@ public class Minecraft {
     public static Minecraft connect(String host) {
         return connect(host, DEFAULT_PORT);
     }
+
 
     /**
      * Connect to mcpi on a specific host/port
@@ -150,7 +159,21 @@ public class Minecraft {
     /**
      * Post a message to the game chat
      */
+    public String returnPublicKey(){
+        return pair.getPublic();
+    }
+
+    private String decrypString(String message){
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.DECRYPT_MODE, pair.getPrivate());
+        
+        //Decrypting the text
+        byte[] decipheredText = cipher.doFinal(message);
+        return new String(decipheredText, StandardCharsets.UTF_8);
+    }
+
     public void postToChat(String message) {
+        message = decrypString(message);
         send("chat.post", message);
     }
 
