@@ -27,6 +27,12 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.util.Vector;
 
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey; 
+
 public class RemoteSession {
 
 	private final LocationType locationType;
@@ -65,10 +71,13 @@ public class RemoteSession {
 
 	private Player attachedPlayer = null;
 
+	private KeyPair pair;
+
 	public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException {
 		this.socket = socket;
 		this.plugin = plugin;
 		this.locationType = plugin.getLocationType();
+
 		init();
 	}
 
@@ -80,6 +89,15 @@ public class RemoteSession {
 		this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
 		startThreads();
 		plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
+		KeyPairGenerator keyPairGen;
+		try {
+			keyPairGen = KeyPairGenerator.getInstance("RSA");
+			keyPairGen.initialize(2048);
+        	this.pair = keyPairGen.generateKeyPair();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}        
 	}
 
 	protected void startThreads() {
@@ -163,6 +181,8 @@ public class RemoteSession {
 		handleCommand(methodName, args);
 	}
 
+	
+
 	protected void handleCommand(String c, String[] args) {
 		
 		try {
@@ -178,7 +198,12 @@ public class RemoteSession {
 				send(world.getBlockTypeIdAt(loc));
 				
 			// world.getBlocks
-			} else if (c.equals("world.getBlocks")) {
+			} else if (c.equals("getPublicKey")) {
+				PublicKey publicKey = pair.getPublic();
+				send(publicKey);
+				
+			// world.getBlocks
+			}else if (c.equals("world.getBlocks")) {
 				Location loc1 = parseRelativeBlockLocation(args[0], args[1], args[2]);
 				Location loc2 = parseRelativeBlockLocation(args[3], args[4], args[5]);
 				send(getBlocks(loc1, loc2));
