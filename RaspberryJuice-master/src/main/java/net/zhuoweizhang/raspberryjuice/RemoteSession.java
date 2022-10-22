@@ -127,7 +127,7 @@ public class RemoteSession {
 
     protected void doHandshake() {
         // do handshake stuff. send public key, then recieve the encrypted AES key from python api
-        this.AESKey = null
+        this.AESKey = null;
     }
 
     protected void startThreads() {
