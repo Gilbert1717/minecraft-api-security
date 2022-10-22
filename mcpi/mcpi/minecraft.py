@@ -1,3 +1,4 @@
+from tokenize import String
 from .connection import Connection
 from .vec3 import Vec3
 from .event import BlockEvent, ChatEvent, ProjectileEvent
@@ -40,6 +41,10 @@ class CmdPositioner:
     def __init__(self, connection, packagePrefix):
         self.conn = connection
         self.pkg = packagePrefix
+    
+    def getPublicKey(self):
+        str = self.conn.sendReceive(self.pkg + b".getPublicKey")
+        return str
 
     def getPos(self, id):
         """Get entity position (entityId:int) => Vec3"""

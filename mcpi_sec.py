@@ -1,3 +1,4 @@
+from email import message
 from mcpi.minecraft import Minecraft
 import rsa
 
@@ -5,10 +6,7 @@ import rsa
 # Feel free to modify, and/or to add other modules/classes in this or other files
 
 mc = Minecraft.create()
-publicKey, privateKey = rsa.newkeys(512)
-message = "Hello world"
-encMessage = rsa.encrypt(message.encode(),publicKey)
-print(encMessage)
-# mc.postToChat(message)
-decMessage = rsa.decrypt(encMessage, privateKey).decode()
-print(decMessage)
+# x = "1"
+# mc.postToChat(x)
+x = mc.getPublicKey()
+print(x)

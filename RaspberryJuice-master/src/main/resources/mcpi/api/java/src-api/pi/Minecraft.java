@@ -5,8 +5,7 @@ import java.util.List;
 import pi.event.BlockHitEvent;
 import pi.tool.Tools;
 
-import java.security.KeyPair;
-import java.security.MessageDigest; 
+
 
 
 /**
@@ -31,9 +30,7 @@ public class Minecraft {
 
     Minecraft(Connection connection) {
         this.connection = connection;
-        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
-        keyPairGen.initialize(2048);
-        pair = keyPairGen.generateKeyPair();
+        
     }
 
     /**
