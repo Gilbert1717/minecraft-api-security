@@ -23,6 +23,9 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.security.KeyPairGenerator;
+import java.security.KeyPair;
+
 public class RaspberryJuicePlugin extends JavaPlugin implements Listener {
 
 	public static final Set<Material> blockBreakDetectionTools = EnumSet.of(
@@ -79,13 +82,19 @@ public class RaspberryJuicePlugin extends JavaPlugin implements Listener {
 
 		//setup session array
 		sessions = new ArrayList<RemoteSession>();
-		
+
+		//make keypair here
+		KeyPairGenerator RsaKeyGen;
+		RsaKeyGen = KeyPairGenerator.getInstance("RSA");
+		RsaKeyGen.initialize(2048);
+		KeyPair RsaKeyPair = RsaKeyGen.generateKeyPair();
+
 		//create new tcp listener thread
 		try {
 			if (hostname.equals("0.0.0.0")) {
-				serverThread = new ServerListenerThread(this, new InetSocketAddress(port));
+				serverThread = new ServerListenerThread(this, new InetSocketAddress(port), RsaKeyPair);//pass keypair to ServerListenerThread
 			} else {
-				serverThread = new ServerListenerThread(this, new InetSocketAddress(hostname, port));
+				serverThread = new ServerListenerThread(this, new InetSocketAddress(hostname, port), RsaKeyPair);//pass keypair to ServerListenerThread
 			}
 			new Thread(serverThread).start();
 			getLogger().info("ThreadListener Started");

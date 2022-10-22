@@ -2,6 +2,7 @@ package net.zhuoweizhang.raspberryjuice;
 
 import java.io.*;
 import java.net.*;
+import java.security.KeyPair;
 
 public class ServerListenerThread implements Runnable {
 
@@ -13,9 +14,12 @@ public class ServerListenerThread implements Runnable {
 
 	private RaspberryJuicePlugin plugin;
 
-	public ServerListenerThread(RaspberryJuicePlugin plugin, SocketAddress bindAddress) throws IOException {
+	private KeyPair RsaKeyPair;
+
+	public ServerListenerThread(RaspberryJuicePlugin plugin, SocketAddress bindAddress, KeyPair RsaKeyPair) throws IOException {
 		this.plugin = plugin;
 		this.bindAddress = bindAddress;
+		this.RsaKeyPair = RsaKeyPair;
 		serverSocket = new ServerSocket();
 		serverSocket.setReuseAddress(true);
 		serverSocket.bind(bindAddress);
@@ -26,7 +30,7 @@ public class ServerListenerThread implements Runnable {
 			try {
 				Socket newConnection = serverSocket.accept();
 				if (!running) return;
-				plugin.handleConnection(new RemoteSession(plugin, newConnection));
+				plugin.handleConnection(new RemoteSession(plugin, newConnection, RsaKeyPair));// pass keypair to RemoteSession
 			} catch (Exception e) {
 				// if the server thread is still running raise an error
 				if (running) {

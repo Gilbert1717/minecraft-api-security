@@ -16,6 +16,13 @@ class Connection:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((address, port))
         self.lastSent = ""
+        # do_handshake()
+
+    def do_handshake():
+        #receive public key
+        #generate AES key
+        #encrypt key and send
+        pass
 
     def drain(self):
         """Drains the socket of incoming data"""

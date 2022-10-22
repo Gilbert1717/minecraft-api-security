@@ -33,6 +33,8 @@ import org.bukkit.util.Vector;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.KeyGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -83,12 +85,16 @@ public class RemoteSession {
 
     private Player attachedPlayer = null;
 
-    private KeyPair pair;
+    private KeyPair RSAKeyPair;
 
-    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException {
+    private SecretKey AESKey;
+
+
+    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket, KeyPair RSAKeyPair) throws IOException {
         this.socket = socket;
         this.plugin = plugin;
         this.locationType = plugin.getLocationType();
+        this.RSAKeyPair = RSAKeyPair;
 
         init();
     }
@@ -116,14 +122,12 @@ public class RemoteSession {
         startThreads();
         plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
 
-        KeyPairGenerator keyPairGen = null;
-        try {
-			keyPairGen = KeyPairGenerator.getInstance("RSA");
-		} catch (NoSuchAlgorithmException e) {
-			throw new RuntimeException(e);
-		}
-		keyPairGen.initialize(2048);
-        this.pair = keyPairGen.generateKeyPair();
+        doHandshake();
+    }
+
+    protected void doHandshake() {
+        // do handshake stuff. send public key, then recieve the encrypted AES key from python api
+        this.AESKey = null
     }
 
     protected void startThreads() {
