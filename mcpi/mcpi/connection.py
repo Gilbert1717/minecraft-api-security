@@ -62,7 +62,7 @@ class Connection:
 
     def receive(self):
         """Receives data. Note that the trailing newline '\n' is trimmed"""
-        s = self.socket.makefile("r").readline().rstrip("\n")
+        s = self.socket.makefile("r").readline().rstrip("\n") #TODO move rstrip("\n") until after decryption
         if s == Connection.RequestFailed:
             raise RequestError("%s failed"%self.lastSent.strip())
         
