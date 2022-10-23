@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -24,6 +25,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.security.KeyPair;
 
 public class RaspberryJuicePlugin extends JavaPlugin implements Listener {
@@ -85,7 +87,12 @@ public class RaspberryJuicePlugin extends JavaPlugin implements Listener {
 
 		//make keypair here
 		KeyPairGenerator RsaKeyGen;
-		RsaKeyGen = KeyPairGenerator.getInstance("RSA");
+		try {
+			RsaKeyGen = KeyPairGenerator.getInstance("RSA");
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			throw new RuntimeException(e);
+		}
 		RsaKeyGen.initialize(2048);
 		KeyPair RsaKeyPair = RsaKeyGen.generateKeyPair();
 
