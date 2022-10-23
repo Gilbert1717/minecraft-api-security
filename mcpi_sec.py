@@ -1,5 +1,5 @@
 from email import message
-from mcpi.minecraft import Minecraft
+from mcpiImproved.mcpi.minecraft import Minecraft
 import rsa
 
 # Assignment 3 main file
