@@ -1,6 +1,7 @@
 import socket
 import select
 import sys
+import os
 from .util import flatten_parameters_to_bytestring
 
 """ @author: Aron Nieminen, Mojang AB"""
@@ -16,13 +17,15 @@ class Connection:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((address, port))
         self.lastSent = ""
-        # do_handshake()
+        # do_handshake(self)
 
-    def do_handshake():
+    def do_handshake(self):
         #receive public key
-        #generate AES key
+        #generate AES and mac key
+        self.AES_key = os.urandom(16)
+        self.MAC_key = os.urandom(1)
         #encrypt key and send
-        pass
+        return
 
     def drain(self):
         """Drains the socket of incoming data"""
@@ -44,6 +47,7 @@ class Connection:
         """
 
         s = b"".join([f, b"(", flatten_parameters_to_bytestring(data), b")", b"\n"])
+        # TODO encrypt s and append a mac to it
         self._send(s)
 
     def _send(self, s):
@@ -61,6 +65,8 @@ class Connection:
         s = self.socket.makefile("r").readline().rstrip("\n")
         if s == Connection.RequestFailed:
             raise RequestError("%s failed"%self.lastSent.strip())
+        
+        #TODO verify mac and decrypt ciphertext here
         return s
 
     def sendReceive(self, *data):

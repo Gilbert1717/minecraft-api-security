@@ -33,6 +33,7 @@ import org.bukkit.util.Vector;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.Key;
 import javax.crypto.SecretKey;
 import javax.crypto.KeyGenerator;
 import java.security.MessageDigest;
@@ -89,6 +90,8 @@ public class RemoteSession {
 
     private SecretKey AESKey;
 
+    private Key MACKey;
+
 
     public RemoteSession(RaspberryJuicePlugin plugin, Socket socket, KeyPair RSAKeyPair) throws IOException {
         this.socket = socket;
@@ -126,8 +129,9 @@ public class RemoteSession {
     }
 
     protected void doHandshake() {
-        // do handshake stuff. send public key, then recieve the encrypted AES key from python api
+        // do handshake stuff. send public key, then recieve the encrypted AES key and MAC key from python api
         this.AESKey = null;
+        this.MACKey = null;
     }
 
     protected void startThreads() {
@@ -205,6 +209,7 @@ public class RemoteSession {
     }
 
     protected void handleLine(String line) {
+        // TODO: verify MAC and decrypy ciphertext here
         System.out.println(line);
         String methodName = line.substring(0, line.indexOf("("));
         //split string into args, handles , inside " i.e. ","
@@ -1093,6 +1098,7 @@ public class RemoteSession {
                 try {
                     String line;
                     while ((line = outQueue.poll()) != null) {
+                        //TODO encrypt and MAC (line + '\n') here
                         out.write(line);
                         out.write('\n');
                     }
