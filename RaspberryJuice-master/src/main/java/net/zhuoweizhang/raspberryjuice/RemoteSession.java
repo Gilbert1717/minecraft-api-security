@@ -102,19 +102,6 @@ public class RemoteSession {
         init();
     }
 
-    public static String PublicKeyToString(String Algorithem, Key key) {
-        try {// w w  w  . j av a 2s .  co m
-            KeyFactory fact = KeyFactory.getInstance(Algorithem);
-            X509EncodedKeySpec spec;
-            spec = fact.getKeySpec(key, X509EncodedKeySpec.class);
-            return Base64.encodeToString(spec.getEncoded(), Base64.DEFAULT);
-        } catch (InvalidKeySpecException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 
     public void init() throws IOException {
         socket.setTcpNoDelay(true);
@@ -237,8 +224,8 @@ public class RemoteSession {
             } else if (c.equals("getPublicKey")) {
                 server.broadcastMessage("getPublicKey Called");
                 PublicKey publicKey = pair.getPublic();
-                String keyString = PublicKeyToString("RSA", publicKey);
-                send(keyString);
+                // convertPublicKeyToString(publicKey)
+                send(publicKey);
 
                 // world.getBlocks
             } else if (c.equals("world.getBlocks")) {
@@ -695,6 +682,18 @@ public class RemoteSession {
             send("Fail");
 
         }
+    }
+
+    private String convertPublicKeyToString(PublicKey publicKey) {
+        byte[] byte_publicKey = publicKey.getEncoded();
+        String keyString = Base64.getEncoder().encodeToString(byte_publicKey);
+        return keyString;
+    }
+
+    private String convertStringToPublicKey(PublicKey publicKey) {
+        byte[] byte_publicKey = publicKey.getEncoded();
+        String keyString = Base64.getEncoder().encodeToString(byte_publicKey);
+        return keyString;
     }
 
     // create a cuboid of lots of blocks
