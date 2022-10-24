@@ -3,7 +3,9 @@ package net.zhuoweizhang.raspberryjuice;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.security.Key;
@@ -83,13 +85,7 @@ public class RemoteSession {
 
     private Key MACKey;
 
-    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException {
-        this.socket = socket;
-        this.plugin = plugin;
-        this.locationType = plugin.getLocationType();
-
-        init();
-    }
+   
     private String convertPublicKeyToString(PublicKey publicKey) {
         byte[] byte_publicKey = publicKey.getEncoded();
         String keyString = Base64.getEncoder().encodeToString(byte_publicKey);
@@ -103,7 +99,14 @@ public class RemoteSession {
         SecretKey originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES"); 
         return originalKey;
     }
-    
+
+    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException {
+        this.socket = socket;
+        this.plugin = plugin;
+        this.locationType = plugin.getLocationType();
+
+        init();
+    }
 
     public RemoteSession(RaspberryJuicePlugin plugin, Socket socket, KeyPair RSAKeyPair) throws IOException {
         this.socket = socket;
@@ -112,7 +115,6 @@ public class RemoteSession {
         this.RSAKeyPair = RSAKeyPair;
 
         init();
-        doHandshake();
     }
 
 
@@ -120,14 +122,23 @@ public class RemoteSession {
         socket.setTcpNoDelay(true);
         socket.setKeepAlive(true);
         socket.setTrafficClass(0x10);
-        this.in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
-        this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
+
+        InputStream in = socket.getInputStream();
+        OutputStream out = socket.getOutputStream();
+        out.write(this.RSAKeyPair.getPublic().getEncoded());
+        out.flush();
+        plugin.getLogger().info("sent public key");
+
+        this.in = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+        this.out = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
         startThreads();
         plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
     }
 
-    protected void doHandshake() {
+    protected void doHandshake() throws IOException {
         // do handshake stuff. send public key, then recieve the encrypted AES key and MAC key from python api
+        OutputStream temp_out = socket.getOutputStream();
+        
         this.AESKey = null;
         this.MACKey = null;
     }

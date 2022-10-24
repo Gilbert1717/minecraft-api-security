@@ -1,9 +1,11 @@
+import base64
 import socket
 import select
 import sys
 import os
 from .util import flatten_parameters_to_bytestring
-import cryptography.hazmat.primitives.serialization as crypto
+import cryptography.hazmat.primitives.serialization as serialization
+
 """ @author: Aron Nieminen, Mojang AB"""
 
 class RequestError(Exception):
@@ -16,15 +18,15 @@ class Connection:
     def __init__(self, address, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((address, port))
-        self.lastSent = ""
-        # do_handshake(self)
+        self.lastSent = ''
+        self.do_handshake()
 
     def do_handshake(self):
         #receive public key
-        #generate AES and mac key
-        crypto.load_pem_public_key
+        self.public_key = self.socket.recv(1500)
+        self.public_key = serialization.load_der_public_key(self.public_key)
         self.AES_key = os.urandom(16)
-        self.MAC_key = os.urandom(1)
+        self.MAC_key = os.urandom(16)
         #encrypt key and send
         return
 
