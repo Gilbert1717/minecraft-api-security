@@ -5,14 +5,18 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.StringWriter;
 import java.net.Socket;
+import java.security.Key;
+import java.security.KeyPair;
+import java.security.PublicKey;
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Iterator;
 
-import javax.management.RuntimeErrorException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -30,19 +34,6 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.util.Vector;
-
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.Key;
-import javax.crypto.SecretKey;
-import javax.crypto.KeyGenerator;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.util.Base64;
-
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
 
 
 
@@ -92,6 +83,20 @@ public class RemoteSession {
 
     private Key MACKey;
 
+    private String convertPublicKeyToString(PublicKey publicKey) {
+        byte[] byte_publicKey = publicKey.getEncoded();
+        String keyString = Base64.getEncoder().encodeToString(byte_publicKey);
+        return keyString;
+    }
+
+    private SecretKey convertStringToSecretKey(String s) {
+        // decode the base64 encoded string
+        byte[] decodedKey = Base64.getDecoder().decode(s);
+        // rebuild key using SecretKeySpec
+        SecretKey originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES"); 
+        return originalKey;
+    }
+    
 
     public RemoteSession(RaspberryJuicePlugin plugin, Socket socket, KeyPair RSAKeyPair) throws IOException {
         this.socket = socket;
@@ -223,9 +228,8 @@ public class RemoteSession {
                 // return PublicKey
             } else if (c.equals("getPublicKey")) {
                 server.broadcastMessage("getPublicKey Called");
-                PublicKey publicKey = pair.getPublic();
-                // convertPublicKeyToString(publicKey)
-                send(publicKey);
+                PublicKey publicKey = RSAKeyPair.getPublic();
+                send(convertPublicKeyToString(publicKey));
 
                 // world.getBlocks
             } else if (c.equals("world.getBlocks")) {
@@ -684,17 +688,7 @@ public class RemoteSession {
         }
     }
 
-    private String convertPublicKeyToString(PublicKey publicKey) {
-        byte[] byte_publicKey = publicKey.getEncoded();
-        String keyString = Base64.getEncoder().encodeToString(byte_publicKey);
-        return keyString;
-    }
-
-    private String convertStringToPublicKey(PublicKey publicKey) {
-        byte[] byte_publicKey = publicKey.getEncoded();
-        String keyString = Base64.getEncoder().encodeToString(byte_publicKey);
-        return keyString;
-    }
+    
 
     // create a cuboid of lots of blocks
     private void setCuboid(Location pos1, Location pos2, int blockType, byte data) {
