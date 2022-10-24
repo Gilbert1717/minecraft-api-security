@@ -92,6 +92,13 @@ public class RemoteSession {
 
     private Key MACKey;
 
+    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException {
+        this.socket = socket;
+        this.plugin = plugin;
+        this.locationType = plugin.getLocationType();
+
+        init();
+    }
 
     public RemoteSession(RaspberryJuicePlugin plugin, Socket socket, KeyPair RSAKeyPair) throws IOException {
         this.socket = socket;
@@ -100,6 +107,7 @@ public class RemoteSession {
         this.RSAKeyPair = RSAKeyPair;
 
         init();
+        doHandshake();
     }
 
 
@@ -111,8 +119,6 @@ public class RemoteSession {
         this.out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
         startThreads();
         plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
-
-        doHandshake();
     }
 
     protected void doHandshake() {
@@ -223,7 +229,7 @@ public class RemoteSession {
                 // return PublicKey
             } else if (c.equals("getPublicKey")) {
                 server.broadcastMessage("getPublicKey Called");
-                PublicKey publicKey = pair.getPublic();
+                PublicKey publicKey = RSAKeyPair.getPublic();
                 // convertPublicKeyToString(publicKey)
                 send(publicKey);
 

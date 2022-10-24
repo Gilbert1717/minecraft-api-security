@@ -3,7 +3,7 @@ import select
 import sys
 import os
 from .util import flatten_parameters_to_bytestring
-
+import cryptography.hazmat.primitives.serialization as crypto
 """ @author: Aron Nieminen, Mojang AB"""
 
 class RequestError(Exception):
@@ -22,6 +22,7 @@ class Connection:
     def do_handshake(self):
         #receive public key
         #generate AES and mac key
+        crypto.load_pem_public_key
         self.AES_key = os.urandom(16)
         self.MAC_key = os.urandom(1)
         #encrypt key and send
