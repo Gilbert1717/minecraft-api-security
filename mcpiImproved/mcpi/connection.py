@@ -1,12 +1,16 @@
 import base64
+import hmac
 import socket
 import select
 import sys
 import os
+from tokenize import Double
 from .util import flatten_parameters_to_bytestring
 import cryptography.hazmat.primitives.hashes as hashes
 import cryptography.hazmat.primitives.serialization as serialization
 import cryptography.hazmat.primitives.asymmetric.padding as padding
+from Crypto.Cipher import AES
+from Crypto import Random
 
 """ @author: Aron Nieminen, Mojang AB"""
 
@@ -22,6 +26,13 @@ class Connection:
         self.socket.connect((address, port))
         self.lastSent = ''
         self.do_handshake()
+    # AES encryption using CTR mode 
+    def encrypt_with_AES(self,message):
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(self.AES_key, AES.MODE_CTR, iv)
+        return iv + cipher.encrypt(message)
+
+    
 
     def do_handshake(self):
         self.public_key = self.socket.recv(1500)
@@ -29,14 +40,15 @@ class Connection:
 
         self.AES_key = os.urandom(16)
         self.MAC_key = os.urandom(16)
+        self.hmac = hmac.new(self.MAC_key,digestmod="SHA256")
 
         ciphertext= self.public_key.encrypt(
             self.AES_key + self.MAC_key, 
             padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(),label=None))
         print(ciphertext[0])
         print(ciphertext[255])
-
-        self.socket.send(ciphertext)
+        #Double-check here, change it to _send, otherwise the ciphertext will be encrypted and MACed again
+        self._send(ciphertext)
         return
 
     def drain(self):
@@ -59,7 +71,9 @@ class Connection:
         """
 
         s = b"".join([f, b"(", flatten_parameters_to_bytestring(data), b")", b"\n"])
-        # TODO encrypt s and append a mac to it
+        # TODO: test if the code works well
+        s = self.encrypt_with_AES(s)
+        s = self.hmac.update(s)
         self._send(s)
 
     def _send(self, s):
