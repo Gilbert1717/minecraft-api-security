@@ -8,9 +8,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Base64;
@@ -19,6 +22,10 @@ import java.util.Iterator;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -100,7 +107,7 @@ public class RemoteSession {
         return originalKey;
     }
 
-    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException {
+    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
         this.socket = socket;
         this.plugin = plugin;
         this.locationType = plugin.getLocationType();
@@ -108,7 +115,7 @@ public class RemoteSession {
         init();
     }
 
-    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket, KeyPair RSAKeyPair) throws IOException {
+    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket, KeyPair RSAKeyPair) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
         this.socket = socket;
         this.plugin = plugin;
         this.locationType = plugin.getLocationType();
@@ -118,17 +125,34 @@ public class RemoteSession {
     }
 
 
-    public void init() throws IOException {
+    public void init() throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         socket.setTcpNoDelay(true);
         socket.setKeepAlive(true);
         socket.setTrafficClass(0x10);
 
         InputStream in = socket.getInputStream();
         OutputStream out = socket.getOutputStream();
+
         out.write(this.RSAKeyPair.getPublic().getEncoded());
         out.flush();
         plugin.getLogger().info("sent public key");
 
+        RSAPublicKey p = (RSAPublicKey) this.RSAKeyPair.getPublic();
+        plugin.getLogger().info("pub key = " + p.getPublicExponent());
+    
+        Cipher decrypt = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+        decrypt.init(Cipher.DECRYPT_MODE, this.RSAKeyPair.getPrivate());
+        
+        byte[] encryptedKeys = new byte[256];
+        in.read(encryptedKeys);
+        plugin.getLogger().info("encrypted key length " + encryptedKeys.length);
+        plugin.getLogger().info("first byte of encrypted keys is " + encryptedKeys[0]);
+        plugin.getLogger().info("last  byte of encrypted keys is " + encryptedKeys[255]);
+        byte[] decryptedKey = decrypt.doFinal(encryptedKeys);
+        plugin.getLogger().info("decrypted keys length is " + decryptedKey.length);
+
+
+        plugin.getLogger().info("input buffer value" + in.read());
         this.in = new BufferedReader(new InputStreamReader(in, "UTF-8"));
         this.out = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
         startThreads();

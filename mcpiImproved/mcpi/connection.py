@@ -4,7 +4,9 @@ import select
 import sys
 import os
 from .util import flatten_parameters_to_bytestring
+import cryptography.hazmat.primitives.hashes as hashes
 import cryptography.hazmat.primitives.serialization as serialization
+import cryptography.hazmat.primitives.asymmetric.padding as padding
 
 """ @author: Aron Nieminen, Mojang AB"""
 
@@ -22,12 +24,19 @@ class Connection:
         self.do_handshake()
 
     def do_handshake(self):
-        #receive public key
         self.public_key = self.socket.recv(1500)
         self.public_key = serialization.load_der_public_key(self.public_key)
+
         self.AES_key = os.urandom(16)
         self.MAC_key = os.urandom(16)
-        #encrypt key and send
+
+        ciphertext= self.public_key.encrypt(
+            self.AES_key + self.MAC_key, 
+            padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(),label=None))
+        print(ciphertext[0])
+        print(ciphertext[255])
+
+        self.socket.send(ciphertext)
         return
 
     def drain(self):
