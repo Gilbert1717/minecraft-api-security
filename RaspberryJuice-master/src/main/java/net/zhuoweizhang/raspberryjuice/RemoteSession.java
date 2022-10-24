@@ -13,6 +13,7 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -130,15 +131,23 @@ public class RemoteSession {
         socket.setKeepAlive(true);
         socket.setTrafficClass(0x10);
 
+        doHandshake();
+        
+        this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream(), "UTF-8"));
+        this.out = new BufferedWriter(new OutputStreamWriter(this.socket.getOutputStream(), "UTF-8"));
+        startThreads();
+        plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
+    }
+
+    protected void doHandshake() throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+        // do handshake stuff. send public key, then recieve the encrypted AES key and MAC key from python api
         InputStream in = socket.getInputStream();
         OutputStream out = socket.getOutputStream();
 
         out.write(this.RSAKeyPair.getPublic().getEncoded());
         out.flush();
-        plugin.getLogger().info("sent public key");
-
         RSAPublicKey p = (RSAPublicKey) this.RSAKeyPair.getPublic();
-        plugin.getLogger().info("pub key = " + p.getPublicExponent());
+        plugin.getLogger().info("sent public key " + "e=" + p.getPublicExponent() +" n=" + p.getModulus());
     
         Cipher decrypt = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
         decrypt.init(Cipher.DECRYPT_MODE, this.RSAKeyPair.getPrivate());
@@ -148,20 +157,12 @@ public class RemoteSession {
         plugin.getLogger().info("encrypted key length " + encryptedKeys.length);
         plugin.getLogger().info("first byte of encrypted keys is " + encryptedKeys[0]);
         plugin.getLogger().info("last  byte of encrypted keys is " + encryptedKeys[255]);
-        byte[] decryptedKey = decrypt.doFinal(encryptedKeys);
-        plugin.getLogger().info("decrypted keys length is " + decryptedKey.length);
+        plugin.getLogger().info("byte in input buffer value" + in.read());
+        //byte[] decryptedKey = decrypt.doFinal(encryptedKeys);
+        //plugin.getLogger().info("decrypted keys length is " + decryptedKey.length);
 
 
-        plugin.getLogger().info("input buffer value" + in.read());
-        this.in = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-        this.out = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
-        startThreads();
-        plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
-    }
-
-    protected void doHandshake() throws IOException {
-        // do handshake stuff. send public key, then recieve the encrypted AES key and MAC key from python api
-        OutputStream temp_out = socket.getOutputStream();
+        
         
         this.AESKey = null;
         this.MACKey = null;
