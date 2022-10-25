@@ -46,7 +46,7 @@ class Connection:
         self.public_key = RSA.import_key(self.public_key)
 
         self.AES_key = os.urandom(16)
-        self.MAC_key = os.urandom(16)
+        self.MAC_key = os.urandom(16) # might need to increase the key length
 
         cipher_rsa = PKCS1_OAEP.new(self.public_key,SHA256)
         # ciphertext= self.public_key.encrypt(self.AES_key + self.MAC_key, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(),label=None))
@@ -57,6 +57,8 @@ class Connection:
         self.socket.send(base64.encodebytes(ciphertext))
         print(len(base64.encodebytes(ciphertext)))
         print(type(base64.encodebytes(ciphertext)))
+        print(self.AES_key[0])
+        print(self.MAC_key[0])
         return
 
     def drain(self):

@@ -17,7 +17,10 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.EncodedKeySpec;
+import java.security.spec.KeySpec;
 import java.security.spec.MGF1ParameterSpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Base64;
@@ -157,7 +160,7 @@ public class RemoteSession {
 
         Cipher decrypt = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
 
-        //this caused so much headaches. it turns out java was using sha-1 for the mgfparameterspec by default and the python side was using sha256.
+        //this caused so much headaches. it turns out java was using sha-1 for the mgfparameterspec by default while the python side was using sha256.
         OAEPParameterSpec spec = new OAEPParameterSpec("SHA256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT);
         decrypt.init(Cipher.DECRYPT_MODE, this.RSAKeyPair.getPrivate(), spec);
         
@@ -173,13 +176,23 @@ public class RemoteSession {
         byte[] decryptedKey = decrypt.doFinal(encryptedKeys);
         plugin.getLogger().info("decrypted keys length is " + decryptedKey.length);
         
-        
+        byte[] AESBytes = new byte[16];
+        byte[] MACBytes = new byte[16];
 
-        
-        
-        
-        this.AESKey = null;
-        this.MACKey = null; 
+        for (int i = 0; i < 16; i++) {
+            AESBytes[i] = decryptedKey[i];
+        }
+
+        for (int i = 0; i < 16; i++) {
+            MACBytes[i] = decryptedKey[i+16];
+        }
+
+        SecretKeySpec AESKeySpec = new SecretKeySpec(AESBytes, "AES");
+        SecretKeySpec MACKeySpec = new SecretKeySpec(MACBytes,"HmacSHA256");
+        this.AESKey = AESKeySpec;
+        this.MACKey = MACKeySpec; 
+        plugin.getLogger().info("" + this.AESKey.getEncoded()[0]);
+        plugin.getLogger().info("" + this.MACKey.getEncoded()[0]);
     }
 
     protected void startThreads() {
