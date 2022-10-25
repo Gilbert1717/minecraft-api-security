@@ -7,6 +7,10 @@ from .util import flatten_parameters_to_bytestring
 import cryptography.hazmat.primitives.hashes as hashes
 import cryptography.hazmat.primitives.serialization as serialization
 import cryptography.hazmat.primitives.asymmetric.padding as padding
+from Crypto.PublicKey import RSA
+from Crypto.Random import get_random_bytes
+from Crypto.Cipher import AES, PKCS1_OAEP
+from Crypto.Hash import SHA256
 
 """ @author: Aron Nieminen, Mojang AB"""
 
@@ -25,18 +29,21 @@ class Connection:
 
     def do_handshake(self):
         self.public_key = self.socket.recv(1500)
-        self.public_key = serialization.load_der_public_key(self.public_key)
+        #self.public_key = serialization.load_der_public_key(self.public_key)
+        self.public_key = RSA.import_key(self.public_key)
 
         self.AES_key = os.urandom(16)
         self.MAC_key = os.urandom(16)
 
-        ciphertext= self.public_key.encrypt(
-            self.AES_key + self.MAC_key, 
-            padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(),label=None))
-        print(ciphertext[0])
-        print(ciphertext[255])
+        cipher_rsa = PKCS1_OAEP.new(self.public_key,SHA256)
+        # ciphertext= self.public_key.encrypt(self.AES_key + self.MAC_key, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(),label=None))
+        ciphertext = cipher_rsa.encrypt(self.AES_key + self.MAC_key)
+        print('first byte = ' + str(ciphertext[0]))
+        print('last byte = ' + str(ciphertext[255]))
 
-        self.socket.send(ciphertext)
+        self.socket.send(base64.encodebytes(ciphertext))
+        print(len(base64.encodebytes(ciphertext)))
+        print(type(base64.encodebytes(ciphertext)))
         return
 
     def drain(self):

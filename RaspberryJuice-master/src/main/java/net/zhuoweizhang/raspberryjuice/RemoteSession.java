@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
@@ -15,6 +16,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.MGF1ParameterSpec;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Base64;
@@ -22,6 +25,8 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
 import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -108,7 +113,7 @@ public class RemoteSession {
         return originalKey;
     }
 
-    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         this.socket = socket;
         this.plugin = plugin;
         this.locationType = plugin.getLocationType();
@@ -116,7 +121,7 @@ public class RemoteSession {
         init();
     }
 
-    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket, KeyPair RSAKeyPair) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+    public RemoteSession(RaspberryJuicePlugin plugin, Socket socket, KeyPair RSAKeyPair) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         this.socket = socket;
         this.plugin = plugin;
         this.locationType = plugin.getLocationType();
@@ -126,7 +131,7 @@ public class RemoteSession {
     }
 
 
-    public void init() throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+    public void init() throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         socket.setTcpNoDelay(true);
         socket.setKeepAlive(true);
         socket.setTrafficClass(0x10);
@@ -139,33 +144,42 @@ public class RemoteSession {
         plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
     }
 
-    protected void doHandshake() throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+    protected void doHandshake() throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         // do handshake stuff. send public key, then recieve the encrypted AES key and MAC key from python api
         InputStream in = socket.getInputStream();
         OutputStream out = socket.getOutputStream();
 
         out.write(this.RSAKeyPair.getPublic().getEncoded());
         out.flush();
-        RSAPublicKey p = (RSAPublicKey) this.RSAKeyPair.getPublic();
-        plugin.getLogger().info("sent public key " + "e=" + p.getPublicExponent() +" n=" + p.getModulus());
-    
+
+        RSAPublicKey pub = (RSAPublicKey) this.RSAKeyPair.getPublic();
+        plugin.getLogger().info("sent public key " + "e=" + pub.getPublicExponent() +" n=" + pub.getModulus());
+
         Cipher decrypt = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-        decrypt.init(Cipher.DECRYPT_MODE, this.RSAKeyPair.getPrivate());
+
+        //this caused so much headaches. it turns out java was using sha-1 for the mgfparameterspec by default and the python side was using sha256.
+        OAEPParameterSpec spec = new OAEPParameterSpec("SHA256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT);
+        decrypt.init(Cipher.DECRYPT_MODE, this.RSAKeyPair.getPrivate(), spec);
         
-        byte[] encryptedKeys = new byte[256];
+        byte[] encryptedKeys = new byte[349];
         in.read(encryptedKeys);
+        encryptedKeys = Base64.getMimeDecoder().decode(encryptedKeys);
         plugin.getLogger().info("encrypted key length " + encryptedKeys.length);
         plugin.getLogger().info("first byte of encrypted keys is " + encryptedKeys[0]);
         plugin.getLogger().info("last  byte of encrypted keys is " + encryptedKeys[255]);
-        plugin.getLogger().info("byte in input buffer value" + in.read());
-        //byte[] decryptedKey = decrypt.doFinal(encryptedKeys);
-        //plugin.getLogger().info("decrypted keys length is " + decryptedKey.length);
+        plugin.getLogger().info("byte value in input buffer" + in.read());
+        
 
+        byte[] decryptedKey = decrypt.doFinal(encryptedKeys);
+        plugin.getLogger().info("decrypted keys length is " + decryptedKey.length);
+        
+        
 
+        
         
         
         this.AESKey = null;
-        this.MACKey = null;
+        this.MACKey = null; 
     }
 
     protected void startThreads() {
