@@ -191,8 +191,8 @@ public class RemoteSession {
         SecretKeySpec MACKeySpec = new SecretKeySpec(MACBytes,"HmacSHA256");
         this.AESKey = AESKeySpec;
         this.MACKey = MACKeySpec; 
-        plugin.getLogger().info("" + this.AESKey.getEncoded()[0]);
-        plugin.getLogger().info("" + this.MACKey.getEncoded()[0]);
+        plugin.getLogger().info("first byte of AESKey = " + this.AESKey.getEncoded()[0]);
+        plugin.getLogger().info("first byte of MACKey = " + this.MACKey.getEncoded()[0]);
     }
 
     protected void startThreads() {
