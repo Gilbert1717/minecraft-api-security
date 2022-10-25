@@ -1,8 +1,10 @@
 import base64
+from email import message
 import socket
 import select
 import sys
 import os
+from tokenize import Double
 from .util import flatten_parameters_to_bytestring
 import cryptography.hazmat.primitives.hashes as hashes
 import cryptography.hazmat.primitives.serialization as serialization
@@ -11,6 +13,9 @@ from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Hash import SHA256
+from cryptography.hazmat.primitives import hmac
+from Crypto.Cipher import AES
+from Crypto import Random
 
 """ @author: Aron Nieminen, Mojang AB"""
 
@@ -26,6 +31,14 @@ class Connection:
         self.socket.connect((address, port))
         self.lastSent = ''
         self.do_handshake()
+
+    # AES encryption using CTR mode 
+    def encrypt_with_AES(self,message):
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(self.AES_key, AES.MODE_CTR, iv)
+        return iv + cipher.encrypt(message)
+
+    
 
     def do_handshake(self):
         self.public_key = self.socket.recv(1500)
@@ -66,8 +79,13 @@ class Connection:
         """
 
         s = b"".join([f, b"(", flatten_parameters_to_bytestring(data), b")", b"\n"])
-        # TODO encrypt s and append a mac to it
-        self._send(s)
+        # TODO: test if the code works well
+        s = self.encrypt_with_AES(s)
+        h = hmac.HMAC(self.MAC_key, hashes.SHA256())
+        h.update(s.encode('ASCII'))
+        message = h.finalize()
+
+        self._send(message)
 
     def _send(self, s):
         """

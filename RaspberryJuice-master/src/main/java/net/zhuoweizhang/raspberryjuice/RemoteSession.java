@@ -1067,6 +1067,7 @@ public class RemoteSession {
     public void send(String a) {
         if (pendingRemoval) return;
         synchronized (outQueue) {
+            //TODO: encrypt a and add MAC here
             outQueue.add(a);
         }
     }
