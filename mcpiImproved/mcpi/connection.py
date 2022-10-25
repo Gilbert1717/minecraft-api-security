@@ -14,7 +14,6 @@ from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Hash import SHA256
 from cryptography.hazmat.primitives import hmac
-from Crypto.Cipher import AES
 from Crypto import Random
 
 """ @author: Aron Nieminen, Mojang AB"""
@@ -79,14 +78,14 @@ class Connection:
         The protocol uses CP437 encoding - https://en.wikipedia.org/wiki/Code_page_437
         which is mildly distressing as it can't encode all of Unicode.
         """
-
-        s = b"".join([f, b"(", flatten_parameters_to_bytestring(data), b")", b"\n"])
         # TODO: test if the code works well
-        s = self.encrypt_with_AES(s)
-        h = hmac.HMAC(self.MAC_key, hashes.SHA256())
-        h.update(s.encode('ASCII'))
-        message = h.finalize()
+        f = self.encrypt_with_AES(f)
+        s = self.encrypt_with_AES(flatten_parameters_to_bytestring(data))
 
+        message = b"".join([f, s, b")", b"\n"])
+
+        h = hmac.HMAC(self.MAC_key, hashes.SHA256())
+        message = h.finalize()
         self._send(message)
 
     def _send(self, s):

@@ -12,29 +12,27 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
-import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.AlgorithmParameterSpec;
-import java.security.spec.EncodedKeySpec;
-import java.security.spec.KeySpec;
 import java.security.spec.MGF1ParameterSpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Iterator;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.OAEPParameterSpec;
-import javax.crypto.spec.PSource;
-import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -101,6 +99,69 @@ public class RemoteSession {
 
     private Key MACKey;
 
+
+    private byte[] getIV(byte[] input) {
+        byte[] ivSpec = new byte[16];
+        for (int i = 0; i < 16; i ++) {
+            ivSpec[i] = input[i];
+        } 
+        return ivSpec;
+    }
+
+    private byte[] getText(byte[] input) {
+        byte[] cipherTextSpec = new byte[input.length - 16 - 32];
+        int j = 0;
+        for (int i = 16; i >= input.length - 32; i ++) {
+            cipherTextSpec[j] = input[i];
+            j++ ;
+        } 
+        return cipherTextSpec;
+    }
+
+    private byte[] getHmac(byte[] input) {
+        byte[]  hmacSpec= new byte[32];
+        int lengthOfInput = input.length;
+        for (int i = 31; i >= 0; i --) {
+            hmacSpec[i] = input[lengthOfInput];
+            lengthOfInput --;
+        } 
+        return hmacSpec;
+    }
+    
+    
+ 
+    private String decrypt(byte[] input) 
+    throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
+    InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException{ 
+        byte[] iv = getIV(input);
+        byte[] text = getText(input);
+        byte[] hmac = getHmac(input);
+        if (verifyMAC(text,hmac) == true) {  
+            Cipher cipher;
+            cipher = Cipher.getInstance("AES/CTR/NoPadding");
+            IvParameterSpec ivspec = new IvParameterSpec(iv);
+            cipher.init(Cipher.DECRYPT_MODE, this.AESKey,ivspec);
+            byte[] plainText;
+            plainText = cipher.doFinal(Base64.getDecoder().decode(getText(input)));
+            return new String(plainText);
+        }
+
+        else{
+            return "verification failed";
+        }
+    }
+
+    private boolean verifyMAC (byte[] cipherTextSpec, byte[] hmacSpec) 
+    throws InvalidKeyException, NoSuchAlgorithmException {
+        Mac hmac = null;
+        MessageDigest localDigest = null;
+        hmac = Mac.getInstance("SHA-256");
+        hmac.init(this.MACKey);
+        hmac.doFinal(cipherTextSpec); 
+        localDigest = MessageDigest.getInstance("SHA-256");   
+        return localDigest.digest() == hmacSpec;
+    }
+
    
     private String convertPublicKeyToString(PublicKey publicKey) {
         byte[] byte_publicKey = publicKey.getEncoded();
@@ -108,13 +169,7 @@ public class RemoteSession {
         return keyString;
     }
 
-    private SecretKey convertStringToSecretKey(String s) {
-        // decode the base64 encoded string
-        byte[] decodedKey = Base64.getDecoder().decode(s);
-        // rebuild key using SecretKeySpec
-        SecretKey originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES"); 
-        return originalKey;
-    }
+  
 
     public RemoteSession(RaspberryJuicePlugin plugin, Socket socket) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         this.socket = socket;
@@ -142,6 +197,7 @@ public class RemoteSession {
         doHandshake();
         
         this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream(), "UTF-8"));
+
         this.out = new BufferedWriter(new OutputStreamWriter(this.socket.getOutputStream(), "UTF-8"));
         startThreads();
         plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
@@ -1122,9 +1178,12 @@ public class RemoteSession {
     private class InputThread implements Runnable {
         public void run() {
             plugin.getLogger().info("Starting input thread");
+            String newLine = in.readLine();
             while (running) {
                 try {
-                    String newLine = in.readLine();
+                    newLine = in.readLine();
+                    
+        
                     //System.out.println(newLine);
                     if (newLine == null) {
                         running = false;
