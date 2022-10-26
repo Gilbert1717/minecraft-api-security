@@ -85,7 +85,7 @@ class Connection:
         s = self.encrypt_with_AES(s)
         print(s)
         h = hmac.HMAC(self.MAC_key, hashes.SHA256())
-        message = h.finalize()
+        message = s + h.finalize()
         print(message)
         self._send(message)
 
