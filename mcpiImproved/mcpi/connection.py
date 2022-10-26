@@ -33,8 +33,8 @@ class Connection:
 
     # AES encryption using CTR mode 
     def encrypt_with_AES(self,message):
-        iv = Random.new().read(AES.block_size)
-        cipher = AES.new(self.AES_key, AES.MODE_CTR, iv)
+        cipher = AES.new(self.AES_key, AES.MODE_CTR)
+        iv = base64.b64encode(cipher.nonce)
         return iv + cipher.encrypt(message)
 
     
@@ -79,13 +79,14 @@ class Connection:
         which is mildly distressing as it can't encode all of Unicode.
         """
         # TODO: test if the code works well
-        f = self.encrypt_with_AES(f)
-        s = self.encrypt_with_AES(flatten_parameters_to_bytestring(data))
 
-        message = b"".join([f, s, b")", b"\n"])
+        s = b"".join([f, b"(", flatten_parameters_to_bytestring(data), b")", b"\n"])
 
+        s = self.encrypt_with_AES(s)
+        print(s)
         h = hmac.HMAC(self.MAC_key, hashes.SHA256())
         message = h.finalize()
+        print(message)
         self._send(message)
 
     def _send(self, s):

@@ -7,6 +7,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.StringReader;
 import java.net.Socket;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -22,6 +24,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.stream.Collectors;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -100,74 +103,74 @@ public class RemoteSession {
     private Key MACKey;
 
 
-    private byte[] getIV(byte[] input) {
-        byte[] ivSpec = new byte[16];
-        for (int i = 0; i < 16; i ++) {
-            ivSpec[i] = input[i];
-        } 
-        return ivSpec;
-    }
+    // private byte[] getIV(byte[] input) {
+    //     byte[] ivSpec = new byte[16];
+    //     for (int i = 0; i < 16; i ++) {
+    //         ivSpec[i] = input[i];
+    //     } 
+    //     return ivSpec;
+    // }
 
-    private byte[] getText(byte[] input) {
-        byte[] cipherTextSpec = new byte[input.length - 16 - 32];
-        int j = 0;
-        for (int i = 16; i >= input.length - 32; i ++) {
-            cipherTextSpec[j] = input[i];
-            j++ ;
-        } 
-        return cipherTextSpec;
-    }
+    // private byte[] getText(byte[] input) {
+    //     byte[] cipherTextSpec = new byte[input.length - 16 - 32];
+    //     int j = 0;
+    //     for (int i = 16; i >= input.length - 32; i ++) {
+    //         cipherTextSpec[j] = input[i];
+    //         j++ ;
+    //     } 
+    //     return cipherTextSpec;
+    // }
 
-    private byte[] getHmac(byte[] input) {
-        byte[]  hmacSpec= new byte[32];
-        int lengthOfInput = input.length;
-        for (int i = 31; i >= 0; i --) {
-            hmacSpec[i] = input[lengthOfInput];
-            lengthOfInput --;
-        } 
-        return hmacSpec;
-    }
+    // private byte[] getHmac(byte[] input) {
+    //     byte[]  hmacSpec= new byte[32];
+    //     int lengthOfInput = input.length;
+    //     for (int i = 31; i >= 0; i --) {
+    //         hmacSpec[i] = input[lengthOfInput];
+    //         lengthOfInput --;
+    //     } 
+    //     return hmacSpec;
+    // }
     
     
  
-    private String decrypt(byte[] input) 
-    throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
-    InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException{ 
-        byte[] iv = getIV(input);
-        byte[] text = getText(input);
-        byte[] hmac = getHmac(input);
-        if (verifyMAC(text,hmac) == true) {  
-            Cipher cipher;
-            cipher = Cipher.getInstance("AES/CTR/NoPadding");
-            IvParameterSpec ivspec = new IvParameterSpec(iv);
-            cipher.init(Cipher.DECRYPT_MODE, this.AESKey,ivspec);
-            byte[] plainText;
-            plainText = cipher.doFinal(Base64.getDecoder().decode(getText(input)));
-            return new String(plainText);
-        }
+    // private String decrypt(byte[] input) 
+    // throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
+    // InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException{ 
+    //     byte[] iv = getIV(input);
+    //     byte[] text = getText(input);
+    //     byte[] hmac = getHmac(input);
+    //     if (verifyMAC(text,hmac) == true) {  
+    //         Cipher cipher;
+    //         cipher = Cipher.getInstance("AES/CTR/NoPadding");
+    //         IvParameterSpec ivspec = new IvParameterSpec(iv);
+    //         cipher.init(Cipher.DECRYPT_MODE, this.AESKey,ivspec);
+    //         byte[] plainText;
+    //         plainText = cipher.doFinal(Base64.getDecoder().decode(getText(input)));
+    //         return new String(plainText);
+    //     }
 
-        else{
-            return "verification failed";
-        }
-    }
+    //     else{
+    //         return "verification failed";
+    //     }
+    // }
 
-    private boolean verifyMAC (byte[] cipherTextSpec, byte[] hmacSpec) 
-    throws InvalidKeyException, NoSuchAlgorithmException {
-        Mac hmac = null;
-        MessageDigest localDigest = null;
-        hmac = Mac.getInstance("SHA-256");
-        hmac.init(this.MACKey);
-        hmac.doFinal(cipherTextSpec); 
-        localDigest = MessageDigest.getInstance("SHA-256");   
-        return localDigest.digest() == hmacSpec;
-    }
+    // private boolean verifyMAC (byte[] cipherTextSpec, byte[] hmacSpec) 
+    // throws InvalidKeyException, NoSuchAlgorithmException {
+    //     Mac hmac = null;
+    //     MessageDigest localDigest = null;
+    //     hmac = Mac.getInstance("SHA-256");
+    //     hmac.init(this.MACKey);
+    //     hmac.doFinal(cipherTextSpec); 
+    //     localDigest = MessageDigest.getInstance("SHA-256");   
+    //     return localDigest.digest() == hmacSpec;
+    // }
 
    
-    private String convertPublicKeyToString(PublicKey publicKey) {
-        byte[] byte_publicKey = publicKey.getEncoded();
-        String keyString = Base64.getEncoder().encodeToString(byte_publicKey);
-        return keyString;
-    }
+    // private String convertPublicKeyToString(PublicKey publicKey) {
+    //     byte[] byte_publicKey = publicKey.getEncoded();
+    //     String keyString = Base64.getEncoder().encodeToString(byte_publicKey);
+    //     return keyString;
+    // }
 
   
 
@@ -175,7 +178,7 @@ public class RemoteSession {
         this.socket = socket;
         this.plugin = plugin;
         this.locationType = plugin.getLocationType();
-
+        System.out.println("create Remote");
         init();
     }
 
@@ -184,7 +187,7 @@ public class RemoteSession {
         this.plugin = plugin;
         this.locationType = plugin.getLocationType();
         this.RSAKeyPair = RSAKeyPair;
-
+        System.out.println("create Remote");
         init();
     }
 
@@ -193,10 +196,21 @@ public class RemoteSession {
         socket.setTcpNoDelay(true);
         socket.setKeepAlive(true);
         socket.setTrafficClass(0x10);
-
+        System.out.println("BufferredReader in");
         doHandshake();
         
+        //verify MAC and decrypt input string 
         this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream(), "UTF-8"));
+        // System.out.println("BufferredReader in");
+        // String input =  in.lines().collect(Collectors.joining());
+        // System.out.println(input);
+        // byte[] inputByte = input.getBytes();
+        // input = decrypt(inputByte);
+        // System.out.println(input);
+        // //assign a new bufferredReader with decrpted string
+        // Reader inputString = new StringReader(input);
+        // this.in = new BufferedReader(inputString);
+
 
         this.out = new BufferedWriter(new OutputStreamWriter(this.socket.getOutputStream(), "UTF-8"));
         startThreads();
@@ -326,7 +340,6 @@ public class RemoteSession {
     }
 
     protected void handleLine(String line) {
-        // TODO: verify MAC and decrypy ciphertext here
         System.out.println(line);
         String methodName = line.substring(0, line.indexOf("("));
         //split string into args, handles , inside " i.e. ","
@@ -1178,12 +1191,10 @@ public class RemoteSession {
     private class InputThread implements Runnable {
         public void run() {
             plugin.getLogger().info("Starting input thread");
-            String newLine = in.readLine();
+            
             while (running) {
                 try {
-                    newLine = in.readLine();
-                    
-        
+                    String newLine = in.readLine();
                     //System.out.println(newLine);
                     if (newLine == null) {
                         running = false;
