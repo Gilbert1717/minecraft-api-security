@@ -2,3 +2,7 @@
 **/.tmp
 __pycache__
 mcpi_sec.py
+
+# IDE
+.vscode/
+.idea/

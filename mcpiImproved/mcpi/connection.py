@@ -31,13 +31,25 @@ class Connection:
         self.lastSent = ''
         self.do_handshake()
 
+    def print_byte(self,bytes):
+        for b in bytes:
+            print(b, end = " ")
+
     # AES encryption using CTR mode 
     def encrypt_with_AES(self,message):
         cipher = AES.new(self.AES_key, AES.MODE_CTR)
-        iv = base64.b64encode(cipher.nonce)
-        return iv + cipher.encrypt(message)
+        iv = cipher.nonce
+        print(iv)
+        print("iv: " + str(base64.encodebytes(iv)))
+        self.print_byte(iv)
+        print("cipher ------------")
+        print(str(base64.encodebytes(cipher.encrypt(message))))
+        # self.print_byte(cipher.encrypt(message))
+        # print(message)
+        # self.print_byte(b"".join([iv, cipher.encrypt(message)]))
+        return  b"".join([iv, cipher.encrypt(message)])
 
-    
+
 
     def do_handshake(self):
         self.public_key = self.socket.recv(1500)
@@ -83,11 +95,23 @@ class Connection:
         s = b"".join([f, b"(", flatten_parameters_to_bytestring(data), b")", b"\n"])
 
         s = self.encrypt_with_AES(s)
-        print(s)
+#         print(base64.encodebytes(self.MAC_key))
+#         print(base64.encodebytes(s))
         h = hmac.HMAC(self.MAC_key, hashes.SHA256())
-        message = s + h.finalize()
-        print(message)
-        self._send(message)
+        h.update(s)
+        # print("s ------------" )
+        # print(str(base64.encodebytes(s)))
+        hf = h.finalize()
+        # print("hf")
+        # print(str(base64.encodebytes(hf)))
+        s = base64.encodebytes(s)
+        hf = base64.encodebytes(hf)
+#         message = base64.encodebytes(s + hf)
+
+#         print(message)
+        self._send(s)
+        self._send(hf)
+
 
     def _send(self, s):
         """

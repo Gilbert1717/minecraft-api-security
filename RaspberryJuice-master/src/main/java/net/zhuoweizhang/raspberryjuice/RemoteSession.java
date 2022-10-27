@@ -1,15 +1,10 @@
 package net.zhuoweizhang.raspberryjuice;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.StringReader;
+import static org.junit.Assert.assertEquals;
+
+import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -111,61 +106,73 @@ public class RemoteSession {
         return ivSpec;
     }
 
-    private byte[] getText(byte[] input) {
-        byte[] cipherTextSpec = new byte[input.length - 16 - 32];
+    private byte[] getCipherText(byte[] input) {
+        byte[] cipherTextSpec = new byte[input.length - 16];
         int j = 0;
-        for (int i = 16; i >= input.length - 32; i ++) {
+        for (int i = 16; i < input.length; i ++) {
             cipherTextSpec[j] = input[i];
             j++ ;
         } 
         return cipherTextSpec;
     }
 
-    //Array size bug, need to be fixed later
-    private byte[] getHmac(byte[] input) {
-        byte[]  hmacSpec= new byte[32];
-        int lengthOfInput = input.length;
-        for (int i = 31; i >= 0; i --) {
-            hmacSpec[i] = input[lengthOfInput];
-            lengthOfInput --;
-        } 
-        return hmacSpec;
-    }
-    
     
  
-    private String decrypt(byte[] input) 
+    private byte[] decrypt(byte[] input, byte[] MAC)
     throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
     InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException{ 
         byte[] iv = getIV(input);
-        byte[] text = getText(input);
-        byte[] hmac = getHmac(input);
-        if (verifyMAC(text,hmac) == true) {  
-            Cipher cipher;
-            cipher = Cipher.getInstance("AES/CTR/NoPadding");
+        System.out.print("iv: ");
+        printByte(iv);
+//         System.out.println("iv: " + Base64.getMimeEncoder().encodeToString(iv));
+        byte[] text = getCipherText(input);
+        System.out.print("text: ");
+        printByte(text);
+//        System.out.println("text: " +Base64.getMimeEncoder().encodeToString(text));
+//        byte[] hmac = getHmac(input);
+        if (verifyMAC(input,MAC)) {
+            Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
             IvParameterSpec ivspec = new IvParameterSpec(iv);
             cipher.init(Cipher.DECRYPT_MODE, this.AESKey,ivspec);
-            byte[] plainText;
-            plainText = cipher.doFinal(Base64.getDecoder().decode(getText(input)));
-            System.out.println(plainText);
-            return new String(plainText);
+//            System.out.println("text:" + text);
+            System.out.println("cipherText: " + Base64.getMimeEncoder().encodeToString(text));
+            byte[] plainText = cipher.doFinal(text);
+           
+            String textString = Base64.getMimeEncoder().encodeToString(plainText);
+            System.out.println("plainText:" + textString);
+            return cipher.doFinal(text);
         }
 
         else{
             System.out.println("MAC failed");
-            return "verification failed";
+            return null;
         }
     }
 
-    private boolean verifyMAC (byte[] cipherTextSpec, byte[] hmacSpec) 
-    throws InvalidKeyException, NoSuchAlgorithmException {
+    private boolean verifyMAC (byte[] cipherTextSpec, byte[] hmacSpec) throws InvalidKeyException {
         Mac hmac = null;
+        byte[] receivedMac = null;
         MessageDigest localDigest = null;
-        hmac = Mac.getInstance("SHA-256");
-        hmac.init(this.MACKey);
-        hmac.doFinal(cipherTextSpec); 
-        localDigest = MessageDigest.getInstance("SHA-256");   
-        return localDigest.digest() == hmacSpec;
+        String algorithm = "HmacSHA256";
+        try {
+            hmac = Mac.getInstance(algorithm);
+            hmac.init(this.MACKey);
+            hmac.update(cipherTextSpec);
+            receivedMac = hmac.doFinal();
+            localDigest = MessageDigest.getInstance("SHA-256");
+
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("this MacKey: " + Base64.getEncoder().encodeToString(this.MACKey.getEncoded()));
+         byte[] digest = localDigest.digest(receivedMac);
+         byte[] digestSpec = localDigest.digest(hmacSpec);
+//        System.out.println("receivedMac: "+ Base64.getEncoder().encodeToString(receivedMac));
+//        System.out.println("cipherTextSpec: "+ Base64.getEncoder().encodeToString(cipherTextSpec));
+//        System.out.println("hmacSpec: "+ new String(hmacSpec));
+//        System.out.println("digest: "+ Base64.getEncoder().encodeToString(digest));
+//        System.out.println("digestSpec: "+ Base64.getEncoder().encodeToString(digestSpec));
+        return Arrays.equals(digest,digestSpec);
     }
 
    
@@ -202,22 +209,43 @@ public class RemoteSession {
         System.out.println("BufferredReader in");
         doHandshake();
         
-        //verify MAC and decrypt input string 
+        //verify MAC and decrypt input string
         this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream(), "UTF-8"));
-        System.out.println("BufferredReader in");
-        String input =  in.lines().collect(Collectors.joining());
-        System.out.println(input);
-        byte[] inputByte = input.getBytes();
-        input = decrypt(inputByte);
-        System.out.println(input);
+//        System.out.println("BufferredReader in");
+//        String input =  in.lines().collect(Collectors.joining());
+//        InputStream inputStream = socket.getInputStream();
+
+
+
+//        this.in = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
+//        byte[] inputByte = inputStream.readAllBytes();
+
+//        inputByte = Base64.getDecoder().decode(inputByte);
+        String inputString = in.readLine();
+        String MACString = in.readLine();
+        byte[] input = Base64.getMimeDecoder().decode(inputString);
+        byte[] MAC = Base64.getMimeDecoder().decode(MACString);
+        System.out.print("input 1:");
+        printByte(input);
+        byte[] receivedString = decrypt(input,MAC);
+        System.out.println("receivedString: "+receivedString);
         //assign a new bufferredReader with decrpted string
-        Reader inputString = new StringReader(input);
-        this.in = new BufferedReader(inputString);
+//        Reader stringReader = new StringReader(receivedString);
+        InputStream is = new ByteArrayInputStream(receivedString);
+        this.in = new BufferedReader(new InputStreamReader(is));
+
 
 
         this.out = new BufferedWriter(new OutputStreamWriter(this.socket.getOutputStream(), "UTF-8"));
         startThreads();
         plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
+    }
+
+    private void printByte(byte[] bytes) {
+        for (byte b:bytes) {
+            System.out.print(b + " ");
+        }
+        System.out.println();
     }
 
     protected void doHandshake() throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
@@ -243,7 +271,7 @@ public class RemoteSession {
         plugin.getLogger().info("encrypted key length " + encryptedKeys.length);
         plugin.getLogger().info("first byte of encrypted keys is " + encryptedKeys[0]);
         plugin.getLogger().info("last  byte of encrypted keys is " + encryptedKeys[255]);
-        plugin.getLogger().info("byte value in input buffer" + in.read());
+        plugin.getLogger().info("byte value in input buffer");
         
 
         byte[] decryptedKey = decrypt.doFinal(encryptedKeys);
@@ -343,7 +371,7 @@ public class RemoteSession {
     }
 
     protected void handleLine(String line) {
-        System.out.println(line);
+        System.out.println("line:"+line);
         String methodName = line.substring(0, line.indexOf("("));
         //split string into args, handles , inside " i.e. ","
         String[] args = line.substring(line.indexOf("(") + 1, line.length() - 1).split(",");
