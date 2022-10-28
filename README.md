@@ -8,3 +8,32 @@ Please indicate where to find your video demo. You can include it in this repo i
 Please summarise each team member's contributions here. Include both an approximate, percentage-based breakdown (e.g., "Anna: 25%, Tom: 25%, Claire: 25%, Halil: 25%") **and a high-level summary of what each member worked on, in dot-point form**.
 
 Ideally, any disputes reagarding the contributions should be resolved prior to submission, but if there is an unresolved dispute then please indicate that this is the case. Do not override each other's contribution statements immediately prior to the deadline -- this will be viewed dimly by the markers!
+
+## Contribution percentages
+|Student name          |GitHub username   |Percentage|
+|----------------------|------------------|----------|
+|Du, Yiqi              |s3665887          |33.3% |
+|Nguyen,Tommy          |tommyStudies      |33.3% |
+|Zhen, Kurniawan Zhong |k-z-z             |33.3% |
+
+## High-level contribution summary
+
+Yiqi
+  - Phase 2-1 report
+  - Phase 3 AES encryption/decryption and HMAC implementation
+  - Phase 3 video
+
+Tommy
+  - Phase 2-1 report
+  - Phase 2-2 report
+
+Kurniawan
+  - Phase 2-1 report
+  - Phase 2-2 report
+  - Phase 3 RSA key-exchange implementation
+
+# Libraries used
+we've used pycryptodome & cryptography for our python implementation, and java.security & javax.crypto for our java implementation
+
+# Reports and video
+
