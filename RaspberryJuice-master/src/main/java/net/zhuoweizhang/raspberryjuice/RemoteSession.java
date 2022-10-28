@@ -100,6 +100,8 @@ public class RemoteSession {
 
     private Cipher cipher;
 
+    private byte[] counter;
+
 
     
 
@@ -108,14 +110,9 @@ public class RemoteSession {
     InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException{ 
         
         if (verifyMAC(input,MAC)) {
-            
-            IvParameterSpec ivSpec = new IvParameterSpec(new byte[16]);
-        
-            this.cipher.init(Cipher.ENCRYPT_MODE, this.AESKey, ivSpec);
-            
             System.out.println("this.cipher.getIV(): " + Base64.getEncoder().encodeToString(this.cipher.getIV()));
            
-            byte[] plainText = cipher.doFinal(input);
+            byte[] plainText = this.cipher.doFinal(input);
             return plainText;
         }
 
@@ -127,26 +124,24 @@ public class RemoteSession {
 
     private boolean verifyMAC (byte[] cipherTextSpec, byte[] hmacSpec) throws InvalidKeyException {
         Mac hmac = null;
-        byte[] receivedMac = null;
-        MessageDigest localDigest = null;
+        byte[] recomputedMac = null;
         String algorithm = "HmacSHA256";
+
         try {
             hmac = Mac.getInstance(algorithm);
             hmac.init(this.MACKey);
             hmac.update(cipherTextSpec);
-            receivedMac = hmac.doFinal();
-            localDigest = MessageDigest.getInstance("SHA-256");
+            recomputedMac = hmac.doFinal();
 
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
        
-        byte[] digest = localDigest.digest(receivedMac);
+        
         System.out.println("cipherTextSpec: " + Base64.getEncoder().encodeToString(cipherTextSpec));
-        System.out.println("receivedMac: " + Base64.getEncoder().encodeToString(receivedMac));
-        System.out.println("digest: " + Base64.getEncoder().encodeToString(digest));
-        System.out.println("hmacSpec: " + Base64.getEncoder().encodeToString(hmacSpec));
-        return Arrays.equals(digest,hmacSpec);
+        System.out.println("recomputedMac: " + Base64.getEncoder().encodeToString(recomputedMac));
+        System.out.println("receivedMac: " + Base64.getEncoder().encodeToString(hmacSpec));
+        return Arrays.equals(recomputedMac,hmacSpec);
     }
 
    
@@ -178,38 +173,24 @@ public class RemoteSession {
         socket.setTcpNoDelay(true);
         socket.setKeepAlive(true);
         socket.setTrafficClass(0x10);
+
         doHandshake();
 
-        this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream(), "UTF-8"));
-        String inputString = in.readLine();
+        this.cipher = Cipher.getInstance("AES/CTR/NoPadding");
+        this.counter = new byte[16];
+        IvParameterSpec ivSpec = new IvParameterSpec(this.counter);
+        this.cipher.init(Cipher.ENCRYPT_MODE, this.AESKey, ivSpec);
+        System.out.println(this.counter);
         
-        do {
-
-            this.cipher = Cipher.getInstance("AES/CTR/NoPadding");
-           
-            // //verify MAC and decrypt input string
-            
-            
-            // InputStreamReader tempIn = new InputStreamReader(is);
-            // BufferedReader tempIn = new BufferedReader(is,"UTF-8");
-            
-            String MACString = in.readLine();
-            byte[] input = Base64.getMimeDecoder().decode(inputString);
-            byte[] MAC = Base64.getMimeDecoder().decode(MACString);
-            byte[] receivedString = decrypt(input,MAC);
-            
-            System.out.println("receivedString: " + new String(receivedString, StandardCharsets.UTF_8));
+       
             // new InputStreamReader(is));
             // String temp = null;
             //     while((temp = this.in.readLine()) != null){
             //         System.out.println("bufferedReader line 1 ---------------:\n" + temp);
             // }
-            } while ((inputString = in.readLine()) != null);
             
-        InputStream is = new ByteArrayInputStream(new byte[0]);
-        // is.read(receivedString);
-        this.in = new BufferedReader(new InputStreamReader(is, "UTF-8"));;
         
+        this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream(), "UTF-8"));;
         this.out = new BufferedWriter(new OutputStreamWriter(this.socket.getOutputStream(), "UTF-8"));
         startThreads();
         plugin.getLogger().info("Opened connection to" + socket.getRemoteSocketAddress() + ".");
@@ -266,7 +247,7 @@ public class RemoteSession {
     }
 
     protected void startThreads() {
-        inThread = new Thread(new InputThread(this.cipher));
+        inThread = new Thread(new InputThread());
         inThread.start();
         outThread = new Thread(new OutputThread());
         outThread.start();
@@ -308,8 +289,14 @@ public class RemoteSession {
 
     /**
      * called from the server main thread
+     * @throws BadPaddingException
+     * @throws IllegalBlockSizeException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchPaddingException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
      */
-    public void tick() {
+    public void tick() throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
         if (origin == null) {
             switch (locationType) {
                 case ABSOLUTE:
@@ -340,13 +327,20 @@ public class RemoteSession {
         }
     }
 
-    protected void handleLine(String line) {
-        
-       
+    protected void handleLine(String line) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
+
+        String inputString = line;
+        String MACString = inQueue.poll();
+
+        byte[] input = Base64.getMimeDecoder().decode(inputString);
+        byte[] MAC = Base64.getMimeDecoder().decode(MACString);
+        byte[] receivedString = decrypt(input,MAC);
             
+        line = new String(receivedString, StandardCharsets.UTF_8);
+        System.out.println("receivedString: " + line);
 
         
-        System.out.println("line:"+line);
+        System.out.println("line: "+line);
         String methodName = line.substring(0, line.indexOf("("));
         //split string into args, handles , inside " i.e. ","
         String[] args = line.substring(line.indexOf("(") + 1, line.length() - 1).split(",");
@@ -1204,6 +1198,7 @@ public class RemoteSession {
                     if (line == null) {
                         running = false;
                     } else {
+                        System.out.println("addinging to queue: " + line);
                         inQueue.add(line);
                         //System.out.println("Added to in queue");
                     }

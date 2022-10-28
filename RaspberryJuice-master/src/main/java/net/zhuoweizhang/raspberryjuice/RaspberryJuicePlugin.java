@@ -8,6 +8,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Server;
@@ -26,6 +30,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.KeyPair;
 
 public class RaspberryJuicePlugin extends JavaPlugin implements Listener {
@@ -250,7 +256,13 @@ public class RaspberryJuicePlugin extends JavaPlugin implements Listener {
 					s.close();
 					sI.remove();
 				} else {
-					s.tick();
+					try {
+						s.tick();
+					} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException
+							| InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 			}
 		}

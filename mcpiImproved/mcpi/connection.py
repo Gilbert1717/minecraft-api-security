@@ -10,11 +10,9 @@ import cryptography.hazmat.primitives.hashes as hashes
 import cryptography.hazmat.primitives.serialization as serialization
 import cryptography.hazmat.primitives.asymmetric.padding as padding
 from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Hash import SHA256
 from cryptography.hazmat.primitives import hmac
-from Crypto import Random
 
 """ @author: Aron Nieminen, Mojang AB"""
 
@@ -90,16 +88,20 @@ class Connection:
         h.update(s)
         h = h.finalize()
         
-        digest = hashes.Hash(hashes.SHA256())
-        digest.update(h)
-        hf = digest.finalize()
+    
+        
         s = base64.encodebytes(s)
-        hf = base64.encodebytes(hf)
+        h = base64.encodebytes(h)
+        print(len(s))
+        print((s))
+        print(len(h))
+        print((h))
         print("s+hf --------------")
-        message = b''.join([s,hf])
+        message = s + h
         print(message)
         print(len(message))
-        print(self.cipher.nonce)
+
+        print('cipher nonce = ' + str(self.cipher.nonce))
         self._send(message)
         # self._send(message)
         # self._send(message)
