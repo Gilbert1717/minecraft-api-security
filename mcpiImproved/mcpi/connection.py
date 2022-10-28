@@ -30,21 +30,13 @@ class Connection:
         self.lastSent = ''
         self.do_handshake()
         iv = b'\x00' * 16
-        self.cipher = AES.new(self.AES_key, AES.MODE_CTR, nonce=b'', initial_value= iv, counter= None)
+        self.cipher = AES.new(self.AES_key, AES.MODE_CTR, initial_value= iv, nonce = b'',counter = None)
+       
 
     def print_byte(self,bytes):
         for b in bytes:
             print(b, end = " ")
 
-    # AES encryption using CTR mode 
-    def encrypt_with_AES(self,message):
-        enc = self.cipher.encrypt(message)
-        
-        print("cipher ------------")
-        self.print_byte(enc)
-        # self.print_byte(cipher.encrypt(message))
-        print(message)
-        return enc
 
 
 
@@ -88,26 +80,32 @@ class Connection:
         which is mildly distressing as it can't encode all of Unicode.
         """
         # TODO: test if the code works well
+        
 
         s = b"".join([f, b"(", flatten_parameters_to_bytestring(data), b")", b"\n"])
-
-        s = self.encrypt_with_AES(s)
-#         print(base64.encodebytes(self.MAC_key))
-#         print(base64.encodebytes(s))
+        print("before: " + str(s))
+        
+        s = self.cipher.encrypt(s)
         h = hmac.HMAC(self.MAC_key, hashes.SHA256())
         h.update(s)
-        # print("s ------------" )
-        # print(str(base64.encodebytes(s)))
-        hf = h.finalize()
-        # print("hf")
-        # print(str(base64.encodebytes(hf)))
+        h = h.finalize()
+        
+        digest = hashes.Hash(hashes.SHA256())
+        digest.update(h)
+        hf = digest.finalize()
         s = base64.encodebytes(s)
         hf = base64.encodebytes(hf)
-#         message = base64.encodebytes(s + hf)
-
-#         print(message)
-        self._send(s)
-        self._send(hf)
+        print("s+hf --------------")
+        message = b''.join([s,hf])
+        print(message)
+        print(len(message))
+        print(self.cipher.nonce)
+        self._send(message)
+        # self._send(message)
+        # self._send(message)
+        # self.socket.send(hf)
+        # self._send(s)
+        # self._send(hf)
 
 
     def _send(self, s):
