@@ -97,14 +97,16 @@ public class RemoteSession {
 
     private Key MACKey;
 
+    private Cipher cipher;
 
-    private byte[] getIV(byte[] input) {
-        byte[] ivSpec = new byte[16];
-        for (int i = 0; i < 16; i ++) {
-            ivSpec[i] = input[i];
-        } 
-        return ivSpec;
-    }
+
+    // private byte[] getIV(byte[] input) {
+    //     byte[] ivSpec = new byte[16];
+    //     for (int i = 0; i < 16; i ++) {
+    //         ivSpec[i] = input[i];
+    //     } 
+    //     return ivSpec;
+    // }
 
     private byte[] getCipherText(byte[] input) {
         byte[] cipherTextSpec = new byte[input.length - 16];
@@ -121,9 +123,6 @@ public class RemoteSession {
     private byte[] decrypt(byte[] input, byte[] MAC)
     throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
     InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException{ 
-        byte[] iv = getIV(input);
-        System.out.print("iv: ");
-        printByte(iv);
 //         System.out.println("iv: " + Base64.getMimeEncoder().encodeToString(iv));
         byte[] text = getCipherText(input);
         System.out.print("text: ");
@@ -131,9 +130,10 @@ public class RemoteSession {
 //        System.out.println("text: " +Base64.getMimeEncoder().encodeToString(text));
 //        byte[] hmac = getHmac(input);
         if (verifyMAC(input,MAC)) {
-            Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
-            IvParameterSpec ivspec = new IvParameterSpec(iv);
-            cipher.init(Cipher.DECRYPT_MODE, this.AESKey,ivspec);
+            
+            IvParameterSpec ivSpec = new IvParameterSpec(new byte[16]);
+            this.cipher.init(Cipher.ENCRYPT_MODE, this.AESKey, ivSpec);
+            System.out.println(cipher.getParameters());
 //            System.out.println("text:" + text);
             System.out.println("cipherText: " + Base64.getMimeEncoder().encodeToString(text));
             byte[] plainText = cipher.doFinal(text);
@@ -208,6 +208,8 @@ public class RemoteSession {
         socket.setTrafficClass(0x10);
         System.out.println("BufferredReader in");
         doHandshake();
+        this.cipher = Cipher.getInstance("AES/CTR/NoPadding");
+        
         
         //verify MAC and decrypt input string
         this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream(), "UTF-8"));

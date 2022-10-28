@@ -20,7 +20,6 @@ from Crypto import Random
 
 class RequestError(Exception):
     pass
-
 class Connection:
     """Connection to a Minecraft Pi game"""
     RequestFailed = "Fail"
@@ -30,6 +29,8 @@ class Connection:
         self.socket.connect((address, port))
         self.lastSent = ''
         self.do_handshake()
+        iv = b'\x00' * 16
+        self.cipher = AES.new(self.AES_key, AES.MODE_CTR, nonce=b'', initial_value= iv, counter= None)
 
     def print_byte(self,bytes):
         for b in bytes:
@@ -37,17 +38,13 @@ class Connection:
 
     # AES encryption using CTR mode 
     def encrypt_with_AES(self,message):
-        cipher = AES.new(self.AES_key, AES.MODE_CTR)
-        iv = cipher.nonce
-        print(iv)
-        print("iv: " + str(base64.encodebytes(iv)))
-        self.print_byte(iv)
+        enc = self.cipher.encrypt(message)
+        
         print("cipher ------------")
-        print(str(base64.encodebytes(cipher.encrypt(message))))
+        self.print_byte(enc)
         # self.print_byte(cipher.encrypt(message))
-        # print(message)
-        # self.print_byte(b"".join([iv, cipher.encrypt(message)]))
-        return  b"".join([iv, cipher.encrypt(message)])
+        print(message)
+        return enc
 
 
 
