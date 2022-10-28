@@ -206,9 +206,6 @@ public class RemoteSession {
         out.write(this.RSAKeyPair.getPublic().getEncoded());
         out.flush();
 
-        RSAPublicKey pub = (RSAPublicKey) this.RSAKeyPair.getPublic();
-        plugin.getLogger().info("sent public key " + "e=" + pub.getPublicExponent() +" n=" + pub.getModulus());
-
         Cipher decrypt = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
 
         //this caused so much headaches. it turns out java was using sha-1 for the mgfparameterspec by default while the python side was using sha256.
@@ -218,14 +215,9 @@ public class RemoteSession {
         byte[] encryptedKeys = new byte[349];
         in.read(encryptedKeys);
         encryptedKeys = Base64.getMimeDecoder().decode(encryptedKeys);
-        plugin.getLogger().info("encrypted key length " + encryptedKeys.length);
-        plugin.getLogger().info("first byte of encrypted keys is " + encryptedKeys[0]);
-        plugin.getLogger().info("last  byte of encrypted keys is " + encryptedKeys[255]);
-        plugin.getLogger().info("byte value in input buffer");
         
 
         byte[] decryptedKey = decrypt.doFinal(encryptedKeys);
-        plugin.getLogger().info("decrypted keys length is " + decryptedKey.length);
         
         byte[] AESBytes = new byte[16];
         byte[] MACBytes = new byte[16];
@@ -242,8 +234,6 @@ public class RemoteSession {
         SecretKeySpec MACKeySpec = new SecretKeySpec(MACBytes,"HmacSHA256");
         this.AESKey = AESKeySpec;
         this.MACKey = MACKeySpec; 
-        plugin.getLogger().info("first byte of AESKey = " + this.AESKey.getEncoded()[0]);
-        plugin.getLogger().info("first byte of MACKey = " + this.MACKey.getEncoded()[0]);
     }
 
     protected void startThreads() {

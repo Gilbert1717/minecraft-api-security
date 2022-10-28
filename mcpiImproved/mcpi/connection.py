@@ -1,14 +1,11 @@
 import base64
-from email import message
+
 import socket
 import select
 import sys
 import os
-from tokenize import Double
 from .util import flatten_parameters_to_bytestring
 import cryptography.hazmat.primitives.hashes as hashes
-import cryptography.hazmat.primitives.serialization as serialization
-import cryptography.hazmat.primitives.asymmetric.padding as padding
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Hash import SHA256
@@ -49,14 +46,9 @@ class Connection:
         cipher_rsa = PKCS1_OAEP.new(self.public_key,SHA256)
         # ciphertext= self.public_key.encrypt(self.AES_key + self.MAC_key, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(),label=None))
         ciphertext = cipher_rsa.encrypt(self.AES_key + self.MAC_key)
-        print('first byte = ' + str(ciphertext[0]))
-        print('last byte = ' + str(ciphertext[255]))
+        
 
         self.socket.send(base64.encodebytes(ciphertext))
-        print(len(base64.encodebytes(ciphertext)))
-        print(type(base64.encodebytes(ciphertext)))
-        print(self.AES_key[0])
-        print(self.MAC_key[0])
         return
 
     def drain(self):
@@ -88,26 +80,16 @@ class Connection:
         h.update(s)
         h = h.finalize()
         
-    
-        
         s = base64.encodebytes(s)
         h = base64.encodebytes(h)
         print(len(s))
         print((s))
         print(len(h))
         print((h))
-        print("s+hf --------------")
-        message = s + h
-        print(message)
-        print(len(message))
+        print(self.cipher.nonce)
 
-        print('cipher nonce = ' + str(self.cipher.nonce))
-        self._send(message)
-        # self._send(message)
-        # self._send(message)
-        # self.socket.send(hf)
-        # self._send(s)
-        # self._send(hf)
+        self._send(s+h)
+
 
 
     def _send(self, s):
