@@ -142,9 +142,6 @@ public class RemoteSession {
         }
        
         
-        System.out.println("cipherTextSpec: " + Base64.getEncoder().encodeToString(cipherTextSpec));
-        System.out.println("recomputedMac: " + Base64.getEncoder().encodeToString(recomputedMac));
-        System.out.println("receivedMac: " + Base64.getEncoder().encodeToString(hmacSpec));
         return Arrays.equals(recomputedMac,hmacSpec);
     }
 
@@ -317,15 +314,10 @@ public class RemoteSession {
         byte[] input = Base64.getMimeDecoder().decode(inputString);
         byte[] MAC = Base64.getMimeDecoder().decode(MACString);
         byte[] receivedString = decrypt(input,MAC);
-            
         line = new String(receivedString, StandardCharsets.UTF_8);
-        System.out.println("receivedString: " + line);
-
-        
-        System.out.println("line: "+line);
         String methodName = line.substring(0, line.indexOf("("));
         //split string into args, handles , inside " i.e. ","
-        String[] args = line.substring(line.indexOf("(") + 1, line.length() - 1).split(",");
+        String[] args = line.substring(line.indexOf("(") + 1, line.indexOf(")")).split(",");
         System.out.println(methodName + ":" + Arrays.toString(args));
         handleCommand(methodName, args);
     }

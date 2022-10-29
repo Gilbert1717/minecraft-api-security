@@ -70,11 +70,10 @@ class Connection:
         
 
         s = b"".join([f, b"(", flatten_parameters_to_bytestring(data), b")", b"\n"])
-        print("before: " + str(s))
+        # print("before: " + str(s))
         cipher = AES.new(self.AES_key, AES.MODE_CTR)
         s = cipher.nonce + cipher.encrypt(s)
-        print(len(cipher.nonce))
-        print(s)
+       
         
         h = hmac.HMAC(self.MAC_key, hashes.SHA256())
         h.update(s)
