@@ -1180,7 +1180,6 @@ public class RemoteSession {
                     if (line == null) {
                         running = false;
                     } else {
-                        System.out.println("addinging to queue: " + line);
                         inQueue.add(line);
                         //System.out.println("Added to in queue");
                     }
