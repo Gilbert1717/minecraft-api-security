@@ -1,25 +1,22 @@
 package net.zhuoweizhang.raspberryjuice;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.*;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
-import java.security.interfaces.RSAPublicKey;
 import java.security.spec.MGF1ParameterSpec;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.stream.Collectors;
+
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -48,7 +45,6 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.util.Vector;
-import org.junit.Test.None;
 
 
 
@@ -100,8 +96,6 @@ public class RemoteSession {
 
     private Cipher cipher;
 
-    private byte[] counter;
-
 
     
 
@@ -110,9 +104,19 @@ public class RemoteSession {
     InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException{ 
         
         if (verifyMAC(input,MAC)) {
-            System.out.println("this.cipher.getIV(): " + Base64.getEncoder().encodeToString(this.cipher.getIV()));
-           
-            byte[] plainText = this.cipher.doFinal(input);
+            byte[] nonce = new byte[16];
+            for (int i = 0; i < 8; i++) {
+                nonce[i] = input[i];
+            }
+            byte[] ciphertext = new byte[input.length - 8];
+            for (int i = 0; i < input.length - 8; i++) {
+                ciphertext[i] = input[i+8];
+            }
+
+            IvParameterSpec iv = new IvParameterSpec(nonce);
+            this.cipher.init(Cipher.DECRYPT_MODE, this.AESKey, iv);
+
+            byte[] plainText = this.cipher.doFinal(ciphertext);
             return plainText;
         }
 
@@ -177,18 +181,6 @@ public class RemoteSession {
         doHandshake();
 
         this.cipher = Cipher.getInstance("AES/CTR/NoPadding");
-        this.counter = new byte[16];
-        IvParameterSpec ivSpec = new IvParameterSpec(this.counter);
-        this.cipher.init(Cipher.ENCRYPT_MODE, this.AESKey, ivSpec);
-        System.out.println(this.counter);
-        
-       
-            // new InputStreamReader(is));
-            // String temp = null;
-            //     while((temp = this.in.readLine()) != null){
-            //         System.out.println("bufferedReader line 1 ---------------:\n" + temp);
-            // }
-            
         
         this.in = new BufferedReader(new InputStreamReader(this.socket.getInputStream(), "UTF-8"));;
         this.out = new BufferedWriter(new OutputStreamWriter(this.socket.getOutputStream(), "UTF-8"));

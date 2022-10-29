@@ -1,4 +1,5 @@
 import base64
+from mimetypes import init
 
 import socket
 import select
@@ -9,6 +10,7 @@ import cryptography.hazmat.primitives.hashes as hashes
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Hash import SHA256
+from Crypto.Util import Counter
 from cryptography.hazmat.primitives import hmac
 
 """ @author: Aron Nieminen, Mojang AB"""
@@ -24,16 +26,11 @@ class Connection:
         self.socket.connect((address, port))
         self.lastSent = ''
         self.do_handshake()
-        iv = b'\x00' * 16
-        self.cipher = AES.new(self.AES_key, AES.MODE_CTR, initial_value= iv, nonce = b'',counter = None)
        
 
     def print_byte(self,bytes):
         for b in bytes:
             print(b, end = " ")
-
-
-
 
     def do_handshake(self):
         self.public_key = self.socket.recv(1500)
@@ -74,20 +71,17 @@ class Connection:
 
         s = b"".join([f, b"(", flatten_parameters_to_bytestring(data), b")", b"\n"])
         print("before: " + str(s))
+        cipher = AES.new(self.AES_key, AES.MODE_CTR)
+        s = cipher.nonce + cipher.encrypt(s)
+        print(len(cipher.nonce))
+        print(s)
         
-        s = self.cipher.encrypt(s)
         h = hmac.HMAC(self.MAC_key, hashes.SHA256())
         h.update(s)
         h = h.finalize()
         
         s = base64.encodebytes(s)
         h = base64.encodebytes(h)
-        print(len(s))
-        print((s))
-        print(len(h))
-        print((h))
-        print(self.cipher.nonce)
-
         self._send(s+h)
 
 
