@@ -33,7 +33,7 @@ Kurniawan
   - Phase 3 RSA key-exchange implementation
 
 # Libraries used
-we've used pycryptodome & cryptography for our python implementation, and java.security & javax.crypto for our java implementation
+we've used pycryptodome & cryptography(only support python version higher than 3.9.0) for our python implementation, and java.security & javax.crypto for our java implementation
 
 # Reports and video
 https://web.microsoftstream.com/video/778ee3ea-b3aa-438a-950d-c501e9a13955
