@@ -37,4 +37,5 @@ we've used pycryptodome & cryptography(only support python version higher than 3
 
 # Reports and video
 https://web.microsoftstream.com/video/778ee3ea-b3aa-438a-950d-c501e9a13955
+https://youtu.be/lcucXP2tu0o (in case stream link does not work)
 
