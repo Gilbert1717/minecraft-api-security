@@ -36,5 +36,5 @@ Kurniawan
 we've used pycryptodome & cryptography for our python implementation, and java.security & javax.crypto for our java implementation
 
 # Reports and video
-https://web.microsoftstream.com/video/778ee3ea-b3aa-438a-950d-c501e9a13955?list=studio
+https://web.microsoftstream.com/video/778ee3ea-b3aa-438a-950d-c501e9a13955
 
