@@ -24,8 +24,8 @@ Yiqi
   - Phase 3 video
 
 Tommy
-  - Phase 2-1 report
-  - Phase 2-2 report
+  - Phase 2-1 report (Encrypt-then-MAC, Encrypt-and-MAC)
+  - Phase 2-2 report 
 
 Kurniawan
   - Phase 2-1 report
